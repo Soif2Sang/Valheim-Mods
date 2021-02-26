@@ -37,6 +37,10 @@
     <Reference Include="assembly_googleanalytics">
       <HintPath>..\valheim_Data\Managed\assembly_googleanalytics.dll</HintPath>
     </Reference>
+    <Reference Include="assembly_guiutils, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\valheim_Data\Managed\assembly_guiutils.dll</HintPath>
+    </Reference>
     <Reference Include="assembly_utils, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\valheim_Data\Managed\assembly_utils.dll</HintPath>
