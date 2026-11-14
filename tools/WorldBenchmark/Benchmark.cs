@@ -19,6 +19,9 @@ public class WorldBenchmark : BaseUnityPlugin
     Vector3 anchor, eye;
     readonly List<ZDO> benches = new List<ZDO>();
     readonly List<float> samples = new List<float>();
+    readonly List<float> renderSamples = new List<float>();
+    RenderTexture renderTarget;
+    Texture2D readback;
     Camera camera;
     Type farLands;
     bool FarLandsReady()
@@ -49,7 +52,34 @@ public class WorldBenchmark : BaseUnityPlugin
         h.Patch(AccessTools.Method(typeof(Game), "IsPaused"), prefix: new HarmonyMethod(typeof(WorldBenchmark), "NotPaused"));
         Application.runInBackground = true; Application.targetFrameRate = -1; QualitySettings.vSyncCount = 0;
         deadline = Time.realtimeSinceStartup + 420f;
+        StartCoroutine(RenderLoop());
     }
+    IEnumerator RenderLoop()
+    {
+        var end = new WaitForEndOfFrame();
+        while (!finished)
+        {
+            yield return end;
+            if (!located || camera == null || phase >= 2) continue;
+            try
+            {
+                if (renderTarget == null) { renderTarget = new RenderTexture(1280, 720, 24, RenderTextureFormat.ARGB32); renderTarget.Create(); readback = new Texture2D(1, 1, TextureFormat.RGB24, false); }
+                PlaceCamera();
+                var previous = camera.targetTexture; var active = RenderTexture.active;
+                var clock = System.Diagnostics.Stopwatch.StartNew();
+                try
+                {
+                    camera.targetTexture = renderTarget; camera.Render(); RenderTexture.active = renderTarget;
+                    // Force GPU completion even when the OS occludes the hidden test window.
+                    readback.ReadPixels(new Rect(0, 0, 1, 1), 0, 0);
+                }
+                finally { camera.targetTexture = previous; RenderTexture.active = active; }
+                if (phase == 1) renderSamples.Add((float)clock.Elapsed.TotalMilliseconds);
+            }
+            catch (Exception e) { finished = true; File.WriteAllText(Path.Combine(output, "FAILED.txt"), e.ToString()); Application.Quit(1); }
+        }
+    }
+    void OnDestroy() { if (renderTarget != null) { renderTarget.Release(); Destroy(renderTarget); } if (readback != null) Destroy(readback); }
     void Update()
     {
         if (finished || string.IsNullOrEmpty(output)) return;
@@ -100,11 +130,11 @@ public class WorldBenchmark : BaseUnityPlugin
                 // Intro respawn may replace the first player after our initial teleport.
                 if (!Player.m_localPlayer.IsTeleporting() && Vector3.Distance(Player.m_localPlayer.transform.position, anchor) > 30f)
                     Player.m_localPlayer.TeleportTo(anchor + Vector3.up * 2f, Quaternion.identity, true);
-                phase = 0; samples.Clear(); phaseAt = Time.realtimeSinceStartup; return;
+                phase = 0; samples.Clear(); renderSamples.Clear(); phaseAt = Time.realtimeSinceStartup; return;
             }
             float elapsed = Time.realtimeSinceStartup - phaseAt;
             if (!FarLandsReady()) { phaseAt = Time.realtimeSinceStartup; return; }
-            if (phase == 0 && elapsed > 60f) { phase = 1; phaseAt = Time.realtimeSinceStartup; }
+            if (phase == 0 && elapsed > 120f) { phase = 1; phaseAt = Time.realtimeSinceStartup; }
             else if (phase == 1)
             {
                 samples.Add(Time.unscaledDeltaTime * 1000f);
@@ -142,6 +172,9 @@ public class WorldBenchmark : BaseUnityPlugin
         }
         finally { camera.targetTexture = previousTarget; RenderTexture.active = previousActive; RenderTexture.ReleaseTemporary(target); Destroy(screenshot); }
         samples.Sort(); float average = samples.Average(); float p95 = samples[(int)((samples.Count - 1) * 0.95f)];
+        if (renderSamples.Count < 30) throw new Exception("Too few synchronized render samples");
+        renderSamples.Sort();
+        File.WriteAllText(Path.Combine(output, "render-cost.json"), "{\"mode\":\"offscreen-camera-plus-synchronous-readback\",\"representsPlayerFPS\":false,\"samples\":" + renderSamples.Count + ",\"meanMs\":" + renderSamples.Average().ToString("F3", System.Globalization.CultureInfo.InvariantCulture) + ",\"p95Ms\":" + renderSamples[(int)((renderSamples.Count - 1) * 0.95f)].ToString("F3", System.Globalization.CultureInfo.InvariantCulture) + "}");
         string numeric = "{\"worldCopyLoaded\":true,\"playerBuiltAnchor\":true,\"width\":" + Screen.width + ",\"height\":" + Screen.height + ",\"samples\":" + samples.Count + ",\"meanFrameMs\":" + average.ToString("F3", System.Globalization.CultureInfo.InvariantCulture) + ",\"p95FrameMs\":" + p95.ToString("F3", System.Globalization.CultureInfo.InvariantCulture) + ",\"fogDensity\":" + RenderSettings.fogDensity.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + ",\"cameraFarClip\":" + camera.farClipPlane.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + ",\"realServerConnection\":false}";
         File.WriteAllText(Path.Combine(output, "PASS.json"), numeric);
         File.WriteAllLines(Path.Combine(output, "frame-ms.txt"), samples.Select(x => x.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)).ToArray());

@@ -2,7 +2,7 @@ param(
  [Parameter(Mandatory=$true)][string]$GamePath,
  [Parameter(Mandatory=$true)][string]$WorldDirectory,
  [Parameter(Mandatory=$true)][string]$ClientPack,
- [ValidateSet('NativeFog','ClearFog','FarLands')][string]$Profile='FarLands',
+ [ValidateSet('NativeFog','ClearFog','FarLands','FarLandsLight')][string]$Profile='FarLands',
  [switch]$AllowConcurrentClient
 )
 $ErrorActionPreference='Stop'
@@ -24,13 +24,18 @@ foreach($name in $files.Keys){
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 [IO.Compression.ZipFile]::ExtractToDirectory([IO.Path]::GetFullPath($ClientPack),$client)
 $farlands=Join-Path $client 'BepInEx/plugins/FarLands/FarLands.dll'
-if($Profile -eq 'FarLands'){
+if($Profile -in @('FarLands','FarLandsLight')){
  if(!(Test-Path $farlands)){
   $disabled=@(Get-ChildItem (Split-Path $farlands) -Filter 'FarLands.dll.disabled*' -File)
   if($disabled.Count -ne 1){throw 'FarLands reference requires exactly one active or disabled FarLands DLL in the pack'}
   Copy-Item -LiteralPath $disabled[0].FullName -Destination $farlands
  }
- Set-Content (Join-Path $client 'BepInEx/config/ru.ivest.farlands.cfg') -Encoding UTF8 -Value "[General]`nEnabled = true`nTerrainDistance = 4000`nForestDistance = 2500`n[Buildings]`nEnabled = false"
+ $farlandsConfig=Join-Path $client 'BepInEx/config/ru.ivest.farlands.cfg'
+ if($Profile -eq 'FarLandsLight'){
+  Copy-Item (Join-Path $root 'profiles/farlands-light/ru.ivest.farlands.cfg') $farlandsConfig -Force
+ }else{
+  Set-Content $farlandsConfig -Encoding UTF8 -Value "[General]`nEnabled = true`nTerrainDistance = 4000`nForestDistance = 2500`n[Buildings]`nEnabled = false`n[Detail]`nAutoDetail = false"
+ }
 }elseif(Test-Path $farlands){throw 'NativeFog and ClearFog require FarLands disabled in the supplied pack'}
 foreach($name in @('valheim.exe','UnityPlayer.dll','steam_appid.txt')){Copy-Item -LiteralPath (Join-Path $GamePath $name) -Destination $client -Force}
 foreach($name in @('valheim_Data','MonoBleedingEdge','doorstop_libs')){
@@ -70,7 +75,7 @@ foreach($name in $files.Keys){if((Get-FileHash (Join-Path $sourceWorld $name)).H
 if(Test-Path (Join-Path $run 'FAILED.txt')){throw (Get-Content (Join-Path $run 'FAILED.txt') -Raw)}
 if($process.ExitCode -ne 0){throw "Benchmark exited with code $($process.ExitCode)"}
 if(!(Test-Path (Join-Path $run 'PASS.json'))){throw 'Benchmark report missing'}
-if($Profile -eq 'FarLands' -and !(Test-Path (Join-Path $run 'farlands-ready.json'))){throw 'FarLands reference did not confirm terrain and forest completion'}
+if($Profile -in @('FarLands','FarLandsLight') -and !(Test-Path (Join-Path $run 'farlands-ready.json'))){throw 'FarLands did not confirm terrain and forest completion'}
 $effective=[ordered]@{profile=$Profile;performanceRepresentative=$false;files=[ordered]@{}}
 foreach($relative in @('BepInEx/config/ru.ivest.farlands.cfg','BepInEx/config/com.chase.valheimenhancededition.cfg','BepInEx/config/local.valheim.horizonclarity.cfg','BepInEx/plugins/FarLands/FarLands.dll')){
  $path=Join-Path $client $relative

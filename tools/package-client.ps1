@@ -3,9 +3,11 @@ param(
  [Parameter(Mandatory=$true)][string]$OutputDirectory,
  [string]$ReleaseName=('Valheim-Client-Complet-'+(Get-Date -Format 'yyyy-MM-dd-HHmmss')),
  [switch]$WithoutFarLands,
- [switch]$HorizonClarity
+ [switch]$HorizonClarity,
+ [switch]$FarLandsLight
 )
 $ErrorActionPreference='Stop'
+if($FarLandsLight -and ($WithoutFarLands -or $HorizonClarity)){throw 'FarLandsLight cannot be combined with WithoutFarLands or HorizonClarity'}
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $output=[IO.Path]::GetFullPath($OutputDirectory)
 if($ReleaseName -notmatch '^[A-Za-z0-9._-]+$'){throw 'Invalid release name'}
@@ -34,6 +36,19 @@ if($WithoutFarLands){
  $farlands=Join-Path $stage 'BepInEx/plugins/FarLands/FarLands.dll'
  if(Test-Path $farlands){Rename-Item -LiteralPath $farlands -NewName 'FarLands.dll.disabled-performance-test'}
  Copy-Item (Join-Path $root 'profiles/without-farlands/com.chase.valheimenhancededition.cfg') (Join-Path $stage 'BepInEx/config/com.chase.valheimenhancededition.cfg') -Force
+}
+if($FarLandsLight){
+ $farlands=Join-Path $stage 'BepInEx/plugins/FarLands/FarLands.dll'
+ if(!(Test-Path $farlands)){
+  $disabled=@(Get-ChildItem (Split-Path $farlands) -Filter 'FarLands.dll.disabled*' -File)
+  if($disabled.Count -ne 1){throw 'Expected one FarLands binary in base pack'}
+  Rename-Item -LiteralPath $disabled[0].FullName -NewName 'FarLands.dll'
+ }
+ if((Get-FileHash $farlands).Hash.ToLowerInvariant() -ne 'b81d9c266e2b8eafc7b137ed063c85e3caf0dd9054bb5dbacee86ad237fbacb2'){throw 'FarLandsLight was validated with FarLands 1.3.0 only'}
+ Copy-Item (Join-Path $root 'profiles/farlands-light/ru.ivest.farlands.cfg') (Join-Path $stage 'BepInEx/config/ru.ivest.farlands.cfg') -Force
+ Copy-Item (Join-Path $root 'profiles/without-farlands/com.chase.valheimenhancededition.cfg') (Join-Path $stage 'BepInEx/config/com.chase.valheimenhancededition.cfg') -Force
+ Set-Content (Join-Path $stage 'BepInEx/config/local.valheim.horizonclarity.cfg') -Value "[Display]`nEnabled = false`nFogMultiplier = 0.25`nViewDistance = 4000" -Encoding UTF8
+ Copy-Item (Join-Path $root 'profiles/farlands-light/README.md') (Join-Path $stage 'Mod-Documentation/FarLands-Light.md') -Force
 }
 $personal=Get-ChildItem $stage -Recurse -File | Where-Object {$_.Extension -in @('.dat','.key')}
 if($personal){throw 'Personal data/key files must not be packaged'}
@@ -80,6 +95,26 @@ Relancer uniquement le client pour charger. Pour annuler, jeu ferme, retirer Bep
 }
 $inventory | Add-Member -Force NoteProperty warband ([ordered]@{version='1.3.1';upstreamVersion='1.3.0';localRevision=1;persistentParty=$true;clientOnly=$true;personalDataIncluded=$false;status='disk/policy tests and Unity packet/logout/forget probe passed; real multiplayer reconnect untested'})
 if($WithoutFarLands){$inventory | Add-Member -Force NoteProperty distanceProfile ([ordered]@{farLandsEnabled=$false;veeFarBuildsDistance=4000;veePreset='Auto';separateTerrainForestDistances=$false;liveRenderingTested=$false})}
+if($FarLandsLight){
+ $inventory | Add-Member -Force NoteProperty distanceProfile ([ordered]@{name='FarLandsLight';farLandsEnabled=$true;farLandsVersion='1.3.0';terrainDistance=4000;forestDistance=2500;treeModelDistance=600;grassDistance=80;terrainShadows=$false;autoDetail=$false;impostorResolution=64;smoothImpostors=$false;veeFarBuildsDistance=4000;horizonClarityEnabled=$false;playerFPSGainVerified=$false})
+ $inventory | Add-Member -Force NoteProperty localPerformanceTest ([ordered]@{profile='FarLandsLight';allModsDisabled=$false;farLandsDisabled=$false;playerFPSGainVerified=$false})
+ if($inventory.PSObject.Properties['horizonClarity']){$inventory.horizonClarity | Add-Member -Force NoteProperty enabled $false}
+ @'
+
+PACK CLIENT COMPLET — FARLANDS ALLEGE
+FarLands 1.3.0 actif : terrain 4000 m, foret 2500 m, modeles 3D jusqu'a 600 m puis imposteurs, herbe 80 m, atlas 64, interpolation et ombres lointaines coupees, detail automatique coupe. VEE conserve les batiments a 4 km. HorizonClarity est desactive pour laisser FarLands gerer l'air.
+Fermer le jeu, extraire et remplacer les fichiers. Supprimer les doublons actifs de FarLands.dll ; le fichier BepInEx/plugins/FarLands/FarLands.dll doit etre unique. Ne pas renommer une ancienne copie .disabled en plus de cette DLL active.
+Le banc hors ecran utilise une copie privee du monde ; il ne certifie pas un gain de FPS en partie. Les arbres lointains restent visibles mais sont plus plats ; l'herbe et les ombres sont moins detaillees. Aucun serveur a modifier.
+Retour au profil precedent : retirer cette DLL active, restaurer la configuration FarLands sauvegardee et reactiver HorizonClarity si souhaite. Sauvegarder ses reglages personnels avant extraction.
+'@ | Set-Content (Join-Path $stage 'INSTALLATION.txt') -Encoding UTF8
+ @"
+
+Sources : https://github.com/Soif2Sang/Valheim-Mods/commit/$commit
+Connexion rapide : effectuer une premiere connexion normale pour memoriser la destination, puis Quick Connect. Aucun mot de passe ni personnage inclus.
+Carte progressive et carte dynamique incluses. Warband 1.3.1 : groupe persistant par monde/personnage, tous les joueurs doivent installer la meme version et former une premiere fois le groupe. Maj+P > Party > Leave saved party pour quitter explicitement.
+Craft From Containers 4.1.0 correctif local inclus. Voir Mod-Documentation pour les validations et limites. Ce pack complet n'a pas ete teste en connexion multijoueur.
+"@ | Add-Content (Join-Path $stage 'INSTALLATION.txt') -Encoding UTF8
+}
 $hashes=[ordered]@{}
 foreach($file in Get-ChildItem $stage -Recurse -File | Sort-Object FullName){
  if($file.FullName -eq $inventoryPath){continue}
