@@ -10,3 +10,9 @@
 *.key
 *.log
 .vs/
+*.db
+*.db2
+*.fwl
+*.fwl2
+*.chunk
+**/Warband/parties/

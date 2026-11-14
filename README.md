@@ -65,3 +65,9 @@ Contrôle Unity du plugin : tools/MapValidation/run.ps1 -GamePath CHEMIN_DU_JEU 
 ## Essai de visibilité sans FarLands
 
 HorizonClarity est un essai client optionnel : brume native multipliée par 0,25 et portée de caméra minimale 4 km. Ajouter -HorizonClarity -WithoutFarLands au packaging pour ce profil. Contrôle isolé : tools/MapValidation/run.ps1 -GamePath CHEMIN_DU_JEU -TestQuickConnect -TestHorizon -AllowConcurrentClient. Tests de propriétés Unity réussis ; rendu réel et FPS non mesurés. Voir mods/HorizonClarity/README.md pour les limites et le retour arrière.
+
+## Validation sur une copie privée du monde
+
+Le banc [WorldBenchmark](tools/WorldBenchmark/README.md) charge une copie complète d'un monde au format chunké dans un hôte local isolé, avec un personnage jetable. Il fixe caméra, météo et heure, puis produit une capture et des temps de trame. FarLands est la référence par défaut (terrain 4 km, forêt 2,5 km, bâtiments confiés à VEE). NativeFog et ClearFog le désactivent pour isoler HorizonClarity. Les trois profils utilisent le même pack et excluent ProgressiveMap des relevés. Fournir explicitement GamePath, WorldDirectory et ClientPack ; voir les commandes dans le README du banc.
+
+Les mondes, captures et rapports restent dans dist, hors Git. Ne jamais utiliser le répertoire vivant du serveur comme cible de sauvegarde. Les mesures en fenêtre masquée sont provisoires et ne prouvent pas les FPS du client connecté au serveur. Les tests synthétiques MapValidation restent utiles pour les régressions ciblées.
