@@ -9,3 +9,7 @@ Les validations historiques ont été effectuées dans une instance Unity isolé
 - LivingMap : configuration conservatrice, rendu détaillé/hauteurs/surimpressions sur l'eau désactivés. Couper/replanter des arbres et modifier une base dans le monde réel reste à vérifier.
 
 Le build racine exécute les contrôles existants de palette et d'identité. Il ne lance ni Valheim ni un serveur, et n'installe aucune DLL.
+
+Le banc Unity est désormais versionné sous tools/MapValidation et doit être lancé depuis ce monorepo. Les anciennes validations mentionnées ci-dessus restent des résultats historiques ; seuls les nouveaux rapports sous dist de ce dépôt valident ses fichiers actuels. Les dépendances tierces sont copiées depuis l'installation fournie via GamePath, sans configuration personnelle.
+
+Migration validée le 14 novembre 2026 : test de menu Quick Connect réussi (rapport local 20261114-210501) et rendu synthétique réussi (20261114-210540 : eau/prairies 0 pixel modifié, pont LivingMap 0 pixel d'écart, bâtiment visible). Les rapports complets et empreintes restent dans dist, hors Git. Le contrôle isolé des préférences graphiques passe également. Ces essais ne rejoignent pas de serveur ; les modes Progressive Map et profil FarLands n'ont pas été réexécutés pendant cette migration.

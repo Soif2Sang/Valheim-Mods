@@ -27,6 +27,19 @@ Le script compile nos trois plugins et Craft From Containers ; il exécute aussi
 
 ## Validation et installation
 
+Ce monorepo est désormais la référence pour **toutes les modifications, compilations et validations**. Les anciennes copies du projet de déploiement sont historiques et ne doivent plus servir à développer ou tester les mods.
+
+Depuis la racine de ce dépôt :
+
+```powershell
+./tools/MapValidation/run.ps1 -GamePath 'CHEMIN_DU_JEU' -TestQuickConnect -AllowConcurrentClient
+./tools/MapValidation/run.ps1 -GamePath 'CHEMIN_DU_JEU' -TestProgressiveMap -ProgressiveMapTestSize 512 -AllowConcurrentClient
+```
+
+Sans mode spécial, le banc vérifie le rendu synthétique des biomes et du pont LivingMap. `-ProfileFarLands` réalise le profil isolé. Un seul mode spécial par exécution. Le jeu normal n'est pas arrêté ; le banc ne rejoint aucun serveur. Les résultats, empreintes et sauvegardes fictives restent sous `dist/map-validation/`, le client isolé sous `dist/map-validation-client/`. Les préférences d'affichage sont restaurées après le test.
+
+Les DLL LivingMap et RememberServerPassword proviennent de leurs dossiers de plugins dans GamePath ; elles ne sont pas publiées ici. Installer les versions documentées avant les tests. Le banc compile nos plugins depuis les sources de ce dépôt. Il ne récupère pas de code depuis les anciens dossiers du projet de déploiement.
+
 Voir [VALIDATION.md](docs/VALIDATION.md). Ce dépôt contient les sources et configurations génériques. Il n'est pas un pack à extraire dans le jeu : copier seulement les DLL souhaitées de dist vers les dossiers de plugins correspondants, client fermé. Ne pas installer une seconde copie du même plugin. Aucune commande de serveur n'est nécessaire.
 
 Les licences amont restent applicables dans leurs sous-dossiers. La déclaration de domaine public d'aedenthorn est conservée dans docs/CraftFromContainers-LICENSE.txt. Nos sources sous mods sont sous licence MIT (LICENSE). Aucun mot de passe, clé, sauvegarde, log personnel ou assembly du jeu n'est distribué.
