@@ -27,6 +27,14 @@ Le script compile nos trois plugins et Craft From Containers ; il exécute aussi
 
 ## Validation et installation
 
+Pour produire un **pack client complet** depuis un ZIP complet de référence déjà approuvé, compiler d'abord les quatre plugins avec build.ps1, puis lancer :
+
+```powershell
+./tools/package-client.ps1 -BaseZip 'PACK_COMPLET_PRECEDENT.zip' -OutputDirectory 'DOSSIER_TELECHARGEMENTS'
+```
+
+Le pack conserve les autres mods du ZIP de référence, remplace les quatre DLL par les builds du monorepo, copie les configurations génériques et actualise INSTALLATION.txt / MODS.json avec le commit source et les SHA-256. Chaque contenu du ZIP est vérifié. Les fichiers personnels .dat/.key sont refusés et LastServer doit être vide. Aucune installation ni connexion au serveur n'est effectuée.
+
 Ce monorepo est désormais la référence pour **toutes les modifications, compilations et validations**. Les anciennes copies du projet de déploiement sont historiques et ne doivent plus servir à développer ou tester les mods.
 
 Depuis la racine de ce dépôt :
