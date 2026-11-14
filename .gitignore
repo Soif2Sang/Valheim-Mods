@@ -1,0 +1,12 @@
+/dist/
+**/bin/
+**/obj/
+**/build/
+*.dll
+*.exe
+*.pdb
+*.zip
+*.dat
+*.key
+*.log
+.vs/
