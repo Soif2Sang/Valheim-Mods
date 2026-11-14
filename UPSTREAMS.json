@@ -1,31 +1,39 @@
-{
-  "CraftFromContainers": {
-    "url": "https://github.com/aedenthorn/ValheimMods",
-    "originalCommit": "90516840e6bdc1d262867ed235047b695269f8ba",
-    "originalPrefix": "CraftFromContainers",
-    "subtreeCommit": "9a1f34fb558c17ad69a679582a28a004ce48b554",
-    "path": "upstream/CraftFromContainers",
-    "localChanges": "Shift-fill fallback and interaction cache invalidation"
-  },
-  "LivingMap": {
-    "url": "https://github.com/tbsj1ga/LivingMapValheim",
-    "ref": "v0.19.2",
-    "commit": "7433c48e06630871613d54be03ab0e7a9bcd9fc7",
-    "path": "upstream/LivingMap",
-    "localChanges": "Generic configuration only; remove tracked upstream build artifact from tip"
-  },
-  "RememberServerPassword": {
-    "url": "https://github.com/iMagic16/RememberServerPassword",
-    "ref": "v1.1.1",
-    "commit": "f531fcc58e92c1ca1ffd0b3bd815afb08decf2cf",
-    "path": "upstream/RememberServerPassword",
-    "localChanges": "Independent QuickConnectCrossplayFix addon; remove upstream release ZIPs from tip",
-    "installedPackageVersion": "1.2.4",
-    "sourceMatchesInstalledPackage": false
-  },
-  "FarLands": {
-    "installedVersion": "1.3.0",
-    "sourceImported": false,
-    "codeModified": false
-  }
+﻿{
+    "CraftFromContainers":  {
+                                "url":  "https://github.com/aedenthorn/ValheimMods",
+                                "originalCommit":  "90516840e6bdc1d262867ed235047b695269f8ba",
+                                "originalPrefix":  "CraftFromContainers",
+                                "subtreeCommit":  "9a1f34fb558c17ad69a679582a28a004ce48b554",
+                                "path":  "upstream/CraftFromContainers",
+                                "localChanges":  "Shift-fill fallback and interaction cache invalidation"
+                            },
+    "LivingMap":  {
+                      "url":  "https://github.com/tbsj1ga/LivingMapValheim",
+                      "ref":  "v0.19.2",
+                      "commit":  "7433c48e06630871613d54be03ab0e7a9bcd9fc7",
+                      "path":  "upstream/LivingMap",
+                      "localChanges":  "Generic configuration only; remove tracked upstream build artifact from tip"
+                  },
+    "RememberServerPassword":  {
+                                   "url":  "https://github.com/iMagic16/RememberServerPassword",
+                                   "ref":  "v1.1.1",
+                                   "commit":  "f531fcc58e92c1ca1ffd0b3bd815afb08decf2cf",
+                                   "path":  "upstream/RememberServerPassword",
+                                   "localChanges":  "Independent QuickConnectCrossplayFix addon; remove upstream release ZIPs from tip",
+                                   "installedPackageVersion":  "1.2.4",
+                                   "sourceMatchesInstalledPackage":  false
+                               },
+    "FarLands":  {
+                     "installedVersion":  "1.3.0",
+                     "sourceImported":  false,
+                     "codeModified":  false
+                 },
+    "Warband":  {
+                    "url":  "https://github.com/Felihens/Warband",
+                    "ref":  "v1.3.0",
+                    "commit":  "f0ba6b72f31c1316801f49122d32874c74332645",
+                    "path":  "upstream/Warband",
+                    "localVersion":  "1.3.1",
+                    "localChanges":  "Persistent per-world/character membership and trusted automatic reconnect"
+                }
 }

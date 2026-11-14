@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$GamePath, [switch]$AllowConcurrentClient, [switch]$ProfileFarLands, [switch]$TestProgressiveMap, [ValidateSet(512,2048)][int]$ProgressiveMapTestSize=2048, [switch]$TestQuickConnect)
+param([Parameter(Mandatory=$true)][string]$GamePath, [switch]$AllowConcurrentClient, [switch]$ProfileFarLands, [switch]$TestProgressiveMap, [ValidateSet(512,2048)][int]$ProgressiveMapTestSize=2048, [switch]$TestQuickConnect, [switch]$TestWarband)
 $ErrorActionPreference = 'Stop'
 if (@(@($ProfileFarLands, $TestProgressiveMap, $TestQuickConnect) | Where-Object { $_ }).Count -gt 1) { throw 'Choose only one validation mode.' }
 $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -49,6 +49,11 @@ $quickDll = Join-Path $plugins 'MagiCorp.RememberServerPassword.dll'
 if ($TestQuickConnect) {
     Copy-Item -LiteralPath (Join-Path $GamePath 'BepInEx/plugins/RememberServerPassword/MagiCorp.RememberServerPassword.dll') -Destination $quickDll -Force
 } elseif (Test-Path $quickDll) { Remove-Item -LiteralPath $quickDll }
+$warbandDll = Join-Path $plugins 'Warband.dll'
+if ($TestWarband) {
+    if (-not $TestQuickConnect) { throw 'Use -TestQuickConnect with -TestWarband for the menu probe.' }
+    Copy-Item -LiteralPath (Join-Path $project 'dist/Warband.dll') -Destination $warbandDll -Force
+} elseif (Test-Path $warbandDll) { Remove-Item -LiteralPath $warbandDll }
 $managed = Join-Path $GamePath 'valheim_Data/Managed'
 $refs = @('netstandard.dll','mscorlib.dll','System.dll','System.Core.dll','assembly_valheim.dll','assembly_utils.dll','Splatform.dll','com.rlabrecque.steamworks.net.dll','UnityEngine.dll','UnityEngine.CoreModule.dll','UnityEngine.ImageConversionModule.dll') | ForEach-Object { Join-Path $managed $_ }
 $refs += Join-Path $core 'BepInEx.dll'
@@ -102,6 +107,7 @@ try {
 if (Test-Path (Join-Path $run 'FAILED.txt')) { throw (Get-Content (Join-Path $run 'FAILED.txt') -Raw) }
 if ($process.ExitCode -ne 0) { throw "Validation process exited with code $($process.ExitCode). See $run" }
 if (-not (Test-Path (Join-Path $run 'PASS.json'))) { throw "No validation report. See $run" }
+if ($TestWarband -and -not (Test-Path (Join-Path $run 'Warband-PASS.json'))) { throw "No Warband validation report. See $run" }
 $inputs = [ordered]@{ checkedAt=(Get-Date -Format o); fixture=$(if ($TestQuickConnect) { 'quick-connect-menu-smoke' } elseif ($TestProgressiveMap) { 'progressive-map-equivalence' } elseif ($ProfileFarLands) { 'local-world-farlands-profile' } else { 'synthetic' }); serverConnection=$false; files=[ordered]@{} }
 foreach ($path in @((Join-Path $PSScriptRoot 'MapValidation.cs'), (Join-Path $PSScriptRoot 'FarLandsProfile.cs'), (Join-Path $PSScriptRoot 'ProgressiveMapChecks.cs'), (Join-Path $PSScriptRoot 'QuickConnectChecks.cs'), (Join-Path $PSScriptRoot 'DisplayPreferences.ps1'), (Join-Path $PSScriptRoot 'run.ps1'), (Join-Path $project 'mods/BiomeClarity/Plugin.cs'), (Join-Path $project 'mods/BiomeClarity/Palette.cs'), (Join-Path $build 'BiomeClarity.dll'), (Join-Path $plugins 'LivingMap.dll'))) {
     $inputs.files[$path.Substring($project.Length+1).Replace('\','/')] = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -109,6 +115,7 @@ foreach ($path in @((Join-Path $PSScriptRoot 'MapValidation.cs'), (Join-Path $PS
 if ($ProfileFarLands) { $inputs.files['installed-profile-copy/FarLands.dll'] = (Get-FileHash -LiteralPath $farlandsDll -Algorithm SHA256).Hash.ToLowerInvariant() }
 if ($TestProgressiveMap) { $inputs.files['test-plugin/ProgressiveMap.dll'] = (Get-FileHash -LiteralPath $progressiveDll -Algorithm SHA256).Hash.ToLowerInvariant() }
 if ($TestQuickConnect) { $inputs.files['test-plugin/QuickConnectCrossplayFix.dll'] = (Get-FileHash -LiteralPath $fixDll -Algorithm SHA256).Hash.ToLowerInvariant(); $inputs.files['test-plugin/RememberServerPassword.dll'] = (Get-FileHash -LiteralPath $quickDll -Algorithm SHA256).Hash.ToLowerInvariant() }
+if ($TestWarband) { $inputs.files['test-plugin/Warband.dll'] = (Get-FileHash $warbandDll -Algorithm SHA256).Hash.ToLowerInvariant() }
 $inputs | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $run 'inputs.json') -Encoding UTF8
 Get-Content -LiteralPath (Join-Path $run 'PASS.json')
 Write-Output "Render artifacts: $run"

@@ -658,7 +658,11 @@ namespace Warband
 
         private static void PartyTab()
         {
-            if (!Party.InParty) GUILayout.Label("No party yet.");
+            if (!Party.InParty)
+            {
+                GUILayout.Label(Party.HasSavedParty ? "Saved party: waiting for your allies." : "No party yet.");
+                if (Party.HasSavedParty && GUILayout.Button("Leave saved party")) Party.Leave();
+            }
             else
             {
                 long me = Party.Me;

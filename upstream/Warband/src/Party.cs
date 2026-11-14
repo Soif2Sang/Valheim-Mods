@@ -30,7 +30,7 @@ namespace Warband
     // The party lives only in the games of its members: messages go player to player through the
     // server (the server itself needs no mod). The leader keeps the member list and sends it to
     // everyone; every member sends its own health, stamina, eitr, effects and weapon to the others.
-    internal static class Party
+    internal static partial class Party
     {
         internal class Online
         {
@@ -148,6 +148,7 @@ namespace Warband
                 RefreshOnline();
                 Timeouts(now);
                 CheckGone(now);
+                TickSaved(now);
             }
             if (InParty && now >= _nextVitals)
             {
@@ -167,12 +168,14 @@ namespace Warband
             rpc.Register<ZPackage>(RpcVitals, new Action<long, ZPackage>(OnVitals));
             rpc.Register<ZPackage>(PartyChat.Rpc, new Action<long, ZPackage>(PartyChat.OnMessage));
             rpc.Register<ZPackage>(Gift.Rpc, new Action<long, ZPackage>(Gift.OnMessage));
+            RegisterSaved(rpc);
             _registeredOn = rpc;
             Plugin.Debug("[net] messages registered, my id " + Me);
         }
 
         private static void Reset(string why)
         {
+            SuspendSaved();
             if (Members.Count > 0) Plugin.Debug("[party] cleared (" + why + ")");
             Members.Clear();
             Leader = 0;
@@ -277,6 +280,8 @@ namespace Warband
 
         internal static void InviteTo(long peer, string name)
         {
+            if (_saved != null && _saved.Keys.Count >= Plugin.MaxMembers.Value && !_saved.Contains(PeerKey(peer)))
+            { Plugin.Message("Saved party is full; leave it to start another party."); return; }
             if (peer == 0 || peer == Me) { Plugin.Message(name + " can't be invited right now"); return; }
             if (Get(peer) != null && InParty) { Plugin.Message(name + " is already in your party"); return; }
             if (Members.Count >= Plugin.MaxMembers.Value) { Plugin.Message("Your party is full"); return; }
@@ -325,15 +330,17 @@ namespace Warband
 
         internal static void Leave()
         {
-            if (!InParty) { Members.Clear(); Leader = 0; return; }
+            if (!InParty) { ForgetSaved(); Members.Clear(); Leader = 0; return; }
             if (Leader == Me)
             {
+                RemoveSaved(Me);
                 Member self = Self();
                 Members.Remove(self);
                 Leader = Members[0].Peer;   // the next one in line leads
                 SendRoster(null);
             }
             else Send(Leader, RpcLeave, new ZPackage());
+            ForgetSaved();
             Members.Clear();
             Leader = 0;
             Plugin.Message("You left the party");
@@ -344,6 +351,7 @@ namespace Warband
             if (!IsLeader || peer == Me) return;
             Member m = Get(peer);
             if (m == null) return;
+            RemoveSaved(peer);
             Members.Remove(m);
             List<long> extra = new List<long>();
             extra.Add(peer);
@@ -392,6 +400,7 @@ namespace Warband
             foreach (Member m in Members) if (m.Peer != me) to.Add(m.Peer);
             if (extra != null) foreach (long p in extra) if (!to.Contains(p) && p != me) to.Add(p);
             foreach (long p in to) Send(p, RpcRoster, new ZPackage(data));
+            SendSaved();
             Plugin.Debug("[party] roster sent to " + to.Count + " (leader " + Leader + ", " + Members.Count + " members)");
         }
 
@@ -482,6 +491,7 @@ namespace Warband
             foreach (Member m in list) if (m.Peer == me) listed = true;
             if (!listed)
             {
+                ForgetSaved();
                 if (wasIn) Plugin.Message("You are no longer in the party");
                 Members.Clear();
                 Leader = 0;
@@ -519,6 +529,7 @@ namespace Warband
             if (Leader != Me) return;
             Member m = Get(sender);
             if (m == null) return;
+            RemoveSaved(sender);
             Members.Remove(m);
             Plugin.Message(m.Name + " left the party");
             SendRoster(null);

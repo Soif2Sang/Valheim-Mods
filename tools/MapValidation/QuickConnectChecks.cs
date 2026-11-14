@@ -46,6 +46,29 @@ internal static class QuickConnectChecks
         bool button = false;
         foreach (var obj in Resources.FindObjectsOfTypeAll<GameObject>()) if (obj.name == objectName) button = true;
         if (!button) throw new Exception("Quick Connect menu button not created");
+        Type party = AccessTools.TypeByName("Warband.Party");
+        if (party != null)
+        {
+            Type stateType = AccessTools.TypeByName("Warband.PersistentRoster");
+            var state = Activator.CreateInstance(stateType);
+            stateType.GetField("Group").SetValue(state, Guid.NewGuid().ToString("N"));
+            var keys = (System.Collections.Generic.List<string>)stateType.GetField("Keys").GetValue(state);
+            keys.Add("synthetic-a"); keys.Add("synthetic-b");
+            string path = Path.Combine(output, "synthetic-party.xml");
+            stateType.GetMethod("Save").Invoke(state, new object[] { path });
+            AccessTools.Field(party, "_saved").SetValue(null, state);
+            AccessTools.Field(party, "_savePath").SetValue(null, path);
+            var packet = (ZPackage)AccessTools.Method(party, "SavedPacket").Invoke(null, null);
+            packet = new ZPackage(packet.GetArray());
+            if (packet.ReadString() != (string)stateType.GetField("Group").GetValue(state) || packet.ReadInt() != 2 || packet.ReadString() != "synthetic-a" || packet.ReadString() != "synthetic-b") throw new Exception("Warband packet round trip failed");
+            AccessTools.Method(party, "SuspendSaved").Invoke(null, null);
+            if (!File.Exists(path) || AccessTools.Field(party, "_saved").GetValue(null) != null) throw new Exception("Warband logout erased saved membership");
+            AccessTools.Field(party, "_savePath").SetValue(null, path);
+            AccessTools.Method(party, "ForgetSaved").Invoke(null, null);
+            if (File.Exists(path)) throw new Exception("Warband explicit forget did not remove saved membership");
+            AccessTools.Method(party, "SuspendSaved").Invoke(null, null);
+            File.WriteAllText(Path.Combine(output, "Warband-PASS.json"), "{\"pluginLoaded\":true,\"nativePacketRoundTrip\":true,\"logoutPreservesDisk\":true,\"explicitForgetClearsDisk\":true,\"realMultiplayerTested\":false}");
+        }
         File.WriteAllText(Path.Combine(output, "PASS.json"), "{\"mode\":\"quick-connect-menu-smoke\",\"authenticationPatchesInstalled\":true,\"encryptionRoundTrip\":true,\"nativePasswordSetterValidated\":true,\"playFabJoinIdentityUppercase\":true,\"savedDestinationUnchanged\":true,\"protection\":\"" + (encrypted.StartsWith("D:") ? "Windows DPAPI" : "AES fallback") + "\",\"quickConnectButtonCreated\":true,\"realServerConnectionTested\":false}");
     }
 }

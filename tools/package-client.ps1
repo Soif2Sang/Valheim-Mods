@@ -13,7 +13,7 @@ if((Test-Path $stage) -or (Test-Path $zip)){throw 'Release already exists'}
 New-Item -ItemType Directory -Force $stage,$output | Out-Null
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 [IO.Compression.ZipFile]::ExtractToDirectory([IO.Path]::GetFullPath($BaseZip),$stage)
-foreach($name in @('BiomeClarity','ProgressiveMap','QuickConnectCrossplayFix','CraftFromContainers')){
+foreach($name in @('BiomeClarity','ProgressiveMap','QuickConnectCrossplayFix','CraftFromContainers','Warband')){
  $target=Join-Path $stage "BepInEx/plugins/$name/$name.dll"
  if(!(Test-Path $target)){throw "Base pack missing $name"}
  Copy-Item -LiteralPath (Join-Path $root "dist/$name.dll") -Destination $target -Force
@@ -21,10 +21,12 @@ foreach($name in @('BiomeClarity','ProgressiveMap','QuickConnectCrossplayFix','C
 foreach($file in Get-ChildItem (Join-Path $root 'config') -File){Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $stage 'BepInEx/config') -Force}
 $personal=Get-ChildItem $stage -Recurse -File | Where-Object {$_.Extension -in @('.dat','.key')}
 if($personal){throw 'Personal data/key files must not be packaged'}
+if(Test-Path (Join-Path $stage 'BepInEx/config/Warband')){throw 'Personal Warband friends/party files must not be packaged'}
 $config=Get-Content (Join-Path $stage 'BepInEx/config/magicorp.valheim.rememberserverpassword.cfg') -Raw
 if($config -notmatch '(?m)^LastServer =\s*$'){throw 'Generic LastServer must be empty'}
 Copy-Item (Join-Path $root 'docs/VALIDATION.md') (Join-Path $stage 'Mod-Documentation/VALIDATION-MONOREPO.md')
 Copy-Item (Join-Path $root 'upstream/CraftFromContainers/FIXES.md') (Join-Path $stage 'Mod-Documentation/CraftFromContainersFix.md') -Force
+Copy-Item (Join-Path $root 'upstream/Warband/PERSISTENCE.md') (Join-Path $stage 'Mod-Documentation/Warband-Persistence.md') -Force
 $commit=git -C $root rev-parse HEAD
 if($LASTEXITCODE -ne 0){throw 'Cannot determine source commit'}
 @"
@@ -34,6 +36,7 @@ Sources : https://github.com/Soif2Sang/Valheim-Mods/commit/$commit
 Fermer Valheim, extraire dans le dossier du jeu et remplacer les fichiers aux memes emplacements, sans doublon de DLL. Relancer seulement le client.
 Inclut Biome Clarity 0.3.4, Progressive Map 0.1.1, Quick Connect Crossplay Fix 0.1.0 et Craft From Containers 4.1.0 correctif local 1 compiles depuis le monorepo.
 Craft From Containers est desormais compile depuis les sources C# corrigees, au lieu de modifier la DLL amont avec un script IL. Version affichee toujours 4.1.0.
+Warband 1.3.1 (revision locale) : groupe memorise par monde et personnage, retour automatique des membres. Tous les membres doivent installer cette version et former le groupe normalement une premiere fois. Depart volontaire/exclusion effacent l'appartenance. Maj+P > Party > Leave saved party permet aussi de quitter quand on est seul connecte. Sauvegarde personnelle dans BepInEx/config/Warband/parties, jamais incluse dans les packs. Validation locale reussie ; reconnexion multijoueur reelle a confirmer.
 Connexion rapide : effectuer une premiere connexion normale avec son personnage et le mot de passe, puis utiliser Quick Connect. Aucun identifiant personnel inclus.
 Carte progressive : repartit la generation pour limiter les blocages ; la carte complete peut arriver plus tard. LivingMap conserve ses mises a jour grossieres, sans surimpression sur l'eau.
 Validation : compilation et tests de palette/identite passes. Les tests Unity historiques du monorepo sont decrits dans Mod-Documentation/VALIDATION-MONOREPO.md ; cette archive complete n'a pas ete testee en connexion multijoueur.
@@ -42,6 +45,7 @@ $inventoryPath=Join-Path $stage 'MODS.json'
 $inventory=Get-Content $inventoryPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $inventory | Add-Member -Force NoteProperty release ([ordered]@{name=$ReleaseName;source='https://github.com/Soif2Sang/Valheim-Mods';commit=$commit;builtFromSource=$true;fullPackMultiplayerTested=$false})
 $inventory.craftFromContainersFix.status='C# source build from monorepo; compilation passed; real multiplayer refill untested'
+$inventory | Add-Member -Force NoteProperty warband ([ordered]@{version='1.3.1';upstreamVersion='1.3.0';localRevision=1;persistentParty=$true;clientOnly=$true;personalDataIncluded=$false;status='disk/policy tests and Unity packet/logout/forget probe passed; real multiplayer reconnect untested'})
 $hashes=[ordered]@{}
 foreach($file in Get-ChildItem $stage -Recurse -File | Sort-Object FullName){
  if($file.FullName -eq $inventoryPath){continue}
