@@ -50,7 +50,13 @@ foreach($file in Get-ChildItem $stage -Recurse -File | Sort-Object FullName){
 }
 $inventory.files=$hashes
 $inventory | ConvertTo-Json -Depth 20 | Set-Content $inventoryPath -Encoding UTF8
-[IO.Compression.ZipFile]::CreateFromDirectory($stage,$zip,[IO.Compression.CompressionLevel]::Optimal,$false)
+$writer=[IO.Compression.ZipFile]::Open($zip,[IO.Compression.ZipArchiveMode]::Create)
+try {
+ foreach($file in Get-ChildItem $stage -Recurse -File){
+  $relative=$file.FullName.Substring($stage.Length+1).Replace('\','/')
+  [IO.Compression.ZipFileExtensions]::CreateEntryFromFile($writer,$file.FullName,$relative,[IO.Compression.CompressionLevel]::Optimal) | Out-Null
+ }
+} finally {$writer.Dispose()}
 $archive=[IO.Compression.ZipFile]::OpenRead($zip)
 try {
  if($archive.Entries.Count -ne $hashes.Count+1){throw 'ZIP file count mismatch'}
