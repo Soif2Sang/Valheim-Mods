@@ -1,10 +1,10 @@
-﻿param([string]$GamePath = 'D:\SteamLibrary\steamapps\common\Valheim', [string]$ModPath)
+param([Parameter(Mandatory=$true)][string]$GamePath, [string]$ModPath)
 $ErrorActionPreference='Stop'
 Add-Type -Path (Join-Path $GamePath 'BepInEx/core/Mono.Cecil.dll')
 $project=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../..'))
 if (-not $ModPath) { $ModPath = Join-Path $project 'dist/BiomeClarity.dll' }
 $mod=[Mono.Cecil.AssemblyDefinition]::ReadAssembly($ModPath)
-$living=[Mono.Cecil.AssemblyDefinition]::ReadAssembly((Join-Path $project 'mods/LivingMapTrial/package/LivingMap.dll'))
+$living=[Mono.Cecil.AssemblyDefinition]::ReadAssembly((Join-Path $project 'upstream/LivingMap/build/LivingMap.dll'))
 try {
  $t=$living.MainModule.Types | Where-Object FullName -eq 'LivingMap.LivingMapPlugin'
  $field=$t.Fields | Where-Object Name -eq '_vanillaTex'

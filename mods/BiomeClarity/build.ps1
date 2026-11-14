@@ -32,5 +32,5 @@ try {
 finally { $assembly.Dispose() }
 Get-FileHash $output -Algorithm SHA256
 
-if (Test-Path (Join-Path $PSScriptRoot '../LivingMapTrial/package/LivingMap.dll')) { & (Join-Path $PSScriptRoot 'tests/BridgeChecks.ps1') -GamePath $GamePath -ModPath $output }
+if (Test-Path (Join-Path $PSScriptRoot '../../upstream/LivingMap/build/LivingMap.dll')) { & (Join-Path $PSScriptRoot 'tests/BridgeChecks.ps1') -GamePath $GamePath -ModPath $output }
 
