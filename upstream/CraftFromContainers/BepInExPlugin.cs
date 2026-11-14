@@ -289,6 +289,7 @@ namespace CraftFromContainers
         {
             public static bool Prefix(Fireplace __instance, Humanoid user, bool hold, ref bool __result, ZNetView ___m_nview)
             {
+                lastPosition = Vector3.positiveInfinity;
                 __result = true;
                 bool pullAll = CheckKeyHeld(fillAllModKey.Value);
                 Inventory inventory = user.GetInventory();
@@ -476,6 +477,7 @@ namespace CraftFromContainers
         {
             public static bool Prefix(Smelter __instance, Humanoid user, ItemDrop.ItemData item, ZNetView ___m_nview)
             {
+                lastPosition = Vector3.positiveInfinity;
                 bool pullAll = CheckKeyHeld(fillAllModKey.Value);
                 if (!modEnabled.Value || !pullOre.Value || (!AllowByKey() && !pullAll) || item != null || (int)AccessTools.Method(typeof(Smelter), "GetQueueSize").Invoke(__instance, Array.Empty<object>()) >= __instance.m_maxOre)
                     return true;
@@ -488,7 +490,7 @@ namespace CraftFromContainers
                     if (!(itemConversion.m_from == null))
                     {
                         ItemDrop.ItemData item2 = inventory.GetItem(itemConversion.m_from.m_itemData.m_shared.m_name, -1, false);
-                        if (item2 != null)
+                        if (item2 != null && !pullAll)
                         {
                             return true;
                         }
@@ -590,6 +592,7 @@ namespace CraftFromContainers
         {
             public static bool Prefix(Smelter __instance, ref bool __result, ZNetView ___m_nview, Humanoid user, ItemDrop.ItemData item)
             {
+                lastPosition = Vector3.positiveInfinity;
                 bool pullAll = CheckKeyHeld(fillAllModKey.Value);
                 Inventory inventory = user.GetInventory();
                 if (!modEnabled.Value || !pullFuel.Value || (!AllowByKey() && !pullAll)|| item != null || inventory == null || (inventory.HaveItem(__instance.m_fuelItem.m_itemData.m_shared.m_name) && !pullAll))
