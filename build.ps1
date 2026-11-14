@@ -5,7 +5,7 @@ param(
 $ErrorActionPreference='Stop'
 $output=Join-Path $PSScriptRoot 'dist'
 New-Item -ItemType Directory -Force $output | Out-Null
-foreach($name in @('BiomeClarity','ProgressiveMap','QuickConnectCrossplayFix')){
+foreach($name in @('BiomeClarity','ProgressiveMap','QuickConnectCrossplayFix','HorizonClarity')){
  & (Join-Path $PSScriptRoot "mods/$name/build.ps1") -GamePath $GamePath
 }
 $managed=Join-Path $GamePath 'valheim_Data/Managed'

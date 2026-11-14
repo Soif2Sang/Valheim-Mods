@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$GamePath, [switch]$AllowConcurrentClient, [switch]$ProfileFarLands, [switch]$TestProgressiveMap, [ValidateSet(512,2048)][int]$ProgressiveMapTestSize=2048, [switch]$TestQuickConnect, [switch]$TestWarband)
+param([Parameter(Mandatory=$true)][string]$GamePath, [switch]$AllowConcurrentClient, [switch]$ProfileFarLands, [switch]$TestProgressiveMap, [ValidateSet(512,2048)][int]$ProgressiveMapTestSize=2048, [switch]$TestQuickConnect, [switch]$TestWarband, [switch]$TestHorizon)
 $ErrorActionPreference = 'Stop'
 if (@(@($ProfileFarLands, $TestProgressiveMap, $TestQuickConnect) | Where-Object { $_ }).Count -gt 1) { throw 'Choose only one validation mode.' }
 $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
@@ -54,6 +54,12 @@ if ($TestWarband) {
     if (-not $TestQuickConnect) { throw 'Use -TestQuickConnect with -TestWarband for the menu probe.' }
     Copy-Item -LiteralPath (Join-Path $project 'dist/Warband.dll') -Destination $warbandDll -Force
 } elseif (Test-Path $warbandDll) { Remove-Item -LiteralPath $warbandDll }
+$horizonDll = Join-Path $plugins 'HorizonClarity.dll'
+if ($TestHorizon) {
+    if (-not $TestQuickConnect) { throw 'Use -TestQuickConnect with -TestHorizon for the menu probe.' }
+    Copy-Item -LiteralPath (Join-Path $project 'dist/HorizonClarity.dll') -Destination $horizonDll -Force
+    Copy-Item -LiteralPath (Join-Path $project 'config/local.valheim.horizonclarity.cfg') -Destination (Join-Path $config 'local.valheim.horizonclarity.cfg') -Force
+} elseif (Test-Path $horizonDll) { Remove-Item -LiteralPath $horizonDll }
 $managed = Join-Path $GamePath 'valheim_Data/Managed'
 $refs = @('netstandard.dll','mscorlib.dll','System.dll','System.Core.dll','assembly_valheim.dll','assembly_utils.dll','Splatform.dll','com.rlabrecque.steamworks.net.dll','UnityEngine.dll','UnityEngine.CoreModule.dll','UnityEngine.ImageConversionModule.dll') | ForEach-Object { Join-Path $managed $_ }
 $refs += Join-Path $core 'BepInEx.dll'
@@ -116,6 +122,7 @@ if ($ProfileFarLands) { $inputs.files['installed-profile-copy/FarLands.dll'] = (
 if ($TestProgressiveMap) { $inputs.files['test-plugin/ProgressiveMap.dll'] = (Get-FileHash -LiteralPath $progressiveDll -Algorithm SHA256).Hash.ToLowerInvariant() }
 if ($TestQuickConnect) { $inputs.files['test-plugin/QuickConnectCrossplayFix.dll'] = (Get-FileHash -LiteralPath $fixDll -Algorithm SHA256).Hash.ToLowerInvariant(); $inputs.files['test-plugin/RememberServerPassword.dll'] = (Get-FileHash -LiteralPath $quickDll -Algorithm SHA256).Hash.ToLowerInvariant() }
 if ($TestWarband) { $inputs.files['test-plugin/Warband.dll'] = (Get-FileHash $warbandDll -Algorithm SHA256).Hash.ToLowerInvariant() }
+if ($TestHorizon) { if (-not (Test-Path (Join-Path $run 'Horizon-PASS.json'))) { throw 'Horizon report missing' }; $inputs.files['test-plugin/HorizonClarity.dll'] = (Get-FileHash $horizonDll).Hash.ToLowerInvariant() }
 $inputs | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $run 'inputs.json') -Encoding UTF8
 Get-Content -LiteralPath (Join-Path $run 'PASS.json')
 Write-Output "Render artifacts: $run"

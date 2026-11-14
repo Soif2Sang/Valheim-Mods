@@ -2,7 +2,8 @@ param(
  [Parameter(Mandatory=$true)][string]$BaseZip,
  [Parameter(Mandatory=$true)][string]$OutputDirectory,
  [string]$ReleaseName=('Valheim-Client-Complet-'+(Get-Date -Format 'yyyy-MM-dd-HHmmss')),
- [switch]$WithoutFarLands
+ [switch]$WithoutFarLands,
+ [switch]$HorizonClarity
 )
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -19,7 +20,16 @@ foreach($name in @('BiomeClarity','ProgressiveMap','QuickConnectCrossplayFix','C
  if(!(Test-Path $target)){throw "Base pack missing $name"}
  Copy-Item -LiteralPath (Join-Path $root "dist/$name.dll") -Destination $target -Force
 }
-foreach($file in Get-ChildItem (Join-Path $root 'config') -File){Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $stage 'BepInEx/config') -Force}
+foreach($file in Get-ChildItem (Join-Path $root 'config') -File){
+ if($file.Name -eq 'local.valheim.horizonclarity.cfg' -and -not $HorizonClarity){continue}
+ Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $stage 'BepInEx/config') -Force
+}
+if($HorizonClarity){
+ $target=Join-Path $stage 'BepInEx/plugins/HorizonClarity'
+ New-Item -ItemType Directory -Force $target | Out-Null
+ Copy-Item (Join-Path $root 'dist/HorizonClarity.dll') $target -Force
+ Copy-Item (Join-Path $root 'mods/HorizonClarity/README.md') (Join-Path $stage 'Mod-Documentation/HorizonClarity.md') -Force
+}
 if($WithoutFarLands){
  $farlands=Join-Path $stage 'BepInEx/plugins/FarLands/FarLands.dll'
  if(Test-Path $farlands){Rename-Item -LiteralPath $farlands -NewName 'FarLands.dll.disabled-performance-test'}
@@ -59,6 +69,15 @@ $inventoryPath=Join-Path $stage 'MODS.json'
 $inventory=Get-Content $inventoryPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $inventory | Add-Member -Force NoteProperty release ([ordered]@{name=$ReleaseName;source='https://github.com/Soif2Sang/Valheim-Mods';commit=$commit;builtFromSource=$true;fullPackMultiplayerTested=$false})
 $inventory.craftFromContainersFix.status='C# source build from monorepo; compilation passed; real multiplayer refill untested'
+if($HorizonClarity){
+ $inventory | Add-Member -Force NoteProperty horizonClarity ([ordered]@{version='0.1.0';clientOnly=$true;fogMultiplier=0.25;minimumCameraDistance=4000;terrainGeneration=$false;status='Unity synthetic fog/camera/restore checks passed; real world rendering and FPS untested'})
+ @'
+
+HORIZON CLARITY 0.1.0 — essai local
+Brume de distance a 25 % de la densite native et camera principale a au moins 4 km. FarLands reste desactive dans ce profil. Aucun nouveau terrain genere ; meteo/couleurs conservees, les brumes volumetriques ne sont pas desactivees. Le rendu de l'eau a distance peut varier avec la brume, sans modification de ses textures ou materiaux.
+Relancer uniquement le client pour charger. Pour annuler, jeu ferme, retirer BepInEx/plugins/HorizonClarity/HorizonClarity.dll. Performances et rendu reel a confirmer.
+'@ | Add-Content (Join-Path $stage 'INSTALLATION.txt') -Encoding UTF8
+}
 $inventory | Add-Member -Force NoteProperty warband ([ordered]@{version='1.3.1';upstreamVersion='1.3.0';localRevision=1;persistentParty=$true;clientOnly=$true;personalDataIncluded=$false;status='disk/policy tests and Unity packet/logout/forget probe passed; real multiplayer reconnect untested'})
 if($WithoutFarLands){$inventory | Add-Member -Force NoteProperty distanceProfile ([ordered]@{farLandsEnabled=$false;veeFarBuildsDistance=4000;veePreset='Auto';separateTerrainForestDistances=$false;liveRenderingTested=$false})}
 $hashes=[ordered]@{}

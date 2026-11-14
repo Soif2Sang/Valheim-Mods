@@ -15,6 +15,7 @@ using UnityEngine;
 [BepInDependency("magicorp.valheim.rememberserverpassword", BepInDependency.DependencyFlags.SoftDependency)]
 [BepInDependency("local.valheim.quickconnectcrossplayfix", BepInDependency.DependencyFlags.SoftDependency)]
 [BepInDependency("felih.Warband", BepInDependency.DependencyFlags.SoftDependency)]
+[BepInDependency("local.valheim.horizonclarity", BepInDependency.DependencyFlags.SoftDependency)]
 public sealed class MapValidation : BaseUnityPlugin
 {
     private string output;

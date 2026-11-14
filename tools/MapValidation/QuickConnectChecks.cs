@@ -46,6 +46,39 @@ internal static class QuickConnectChecks
         bool button = false;
         foreach (var obj in Resources.FindObjectsOfTypeAll<GameObject>()) if (obj.name == objectName) button = true;
         if (!button) throw new Exception("Quick Connect menu button not created");
+        Type horizon = AccessTools.TypeByName("HorizonClarity.Plugin");
+        if (horizon != null)
+        {
+            object instance = AccessTools.Field(horizon, "current").GetValue(null);
+            if (instance == null) throw new Exception("HorizonClarity did not initialize");
+            float beforeFog = RenderSettings.fogDensity;
+            Color beforeColor = RenderSettings.fogColor;
+            var cameraObject = new GameObject("HorizonSyntheticCamera");
+            Camera camera = cameraObject.AddComponent<Camera>(); camera.enabled = false;
+            try
+            {
+                AccessTools.Method(horizon, "ApplyFog").Invoke(instance, new object[] { 0.004f });
+                if (!Mathf.Approximately(RenderSettings.fogDensity, 0.001f)) throw new Exception("Horizon fog not scaled");
+                AccessTools.Method(horizon, "ApplyFog").Invoke(instance, new object[] { 0.004f });
+                if (!Mathf.Approximately(RenderSettings.fogDensity, 0.001f)) throw new Exception("Fog compounded across native updates");
+                camera.farClipPlane = 2000;
+                AccessTools.Method(horizon, "ApplyCamera").Invoke(instance, new object[] { camera });
+                if (camera.farClipPlane != 4000) throw new Exception("Main camera minimum failed");
+                AccessTools.Method(horizon, "Restore").Invoke(instance, null);
+                if (!Mathf.Approximately(RenderSettings.fogDensity, 0.004f) || camera.farClipPlane != 2000 || RenderSettings.fogColor != beforeColor) throw new Exception("Horizon restore changed native settings");
+                AccessTools.Method(horizon, "ApplyFog").Invoke(instance, new object[] { 0.004f });
+                RenderSettings.fogDensity = 0.007f;
+                AccessTools.Method(horizon, "Restore").Invoke(instance, null);
+                if (!Mathf.Approximately(RenderSettings.fogDensity, 0.007f)) throw new Exception("Horizon overwrote a later native change");
+                File.WriteAllText(Path.Combine(output, "Horizon-PASS.json"), "{\"pluginLoaded\":true,\"fogScaledWithoutCompounding\":true,\"camera4000\":true,\"nativeRestore\":true,\"fogColorUnchanged\":true,\"laterChangesPreserved\":true,\"realWorldRenderingTested\":false}");
+            }
+            finally
+            {
+                AccessTools.Method(horizon, "Restore").Invoke(instance, null);
+                RenderSettings.fogDensity = beforeFog;
+                UnityEngine.Object.Destroy(cameraObject);
+            }
+        }
         Type party = AccessTools.TypeByName("Warband.Party");
         if (party != null)
         {
