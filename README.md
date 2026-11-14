@@ -55,6 +55,8 @@ Les licences amont restent applicables dans leurs sous-dossiers. La déclaration
 
 ## Groupes persistants — Warband 1.3.1 local
 
+Profil optionnel sans FarLands : ajouter `-WithoutFarLands` au packaging pour appliquer `profiles/without-farlands` (VEE portée commune 4 km, FarLands désactivé). Cette option ne reproduit pas les distances séparées terrain/forêt de FarLands. Rendu et FPS à vérifier en jeu ; aucun serveur modifié.
+
 Tous les membres doivent installer la nouvelle version, puis former le groupe une première fois. Les reconnexions au même monde/personnage réutilisent le groupe mémorisé. Quitter ou être exclu efface cette appartenance ; Maj+P > Party > Leave saved party permet aussi de quitter seul. Voir upstream/Warband/PERSISTENCE.md pour le stockage local et les limites de synchronisation hors ligne.
 
 Contrôle Unity du plugin : tools/MapValidation/run.ps1 -GamePath CHEMIN_DU_JEU -TestQuickConnect -TestWarband -AllowConcurrentClient. Sonde synthétique, aucune reconnexion multijoueur réelle.

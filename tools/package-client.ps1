@@ -1,7 +1,8 @@
 param(
  [Parameter(Mandatory=$true)][string]$BaseZip,
  [Parameter(Mandatory=$true)][string]$OutputDirectory,
- [string]$ReleaseName=('Valheim-Client-Complet-'+(Get-Date -Format 'yyyy-MM-dd-HHmmss'))
+ [string]$ReleaseName=('Valheim-Client-Complet-'+(Get-Date -Format 'yyyy-MM-dd-HHmmss')),
+ [switch]$WithoutFarLands
 )
 $ErrorActionPreference='Stop'
 $root=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -19,6 +20,11 @@ foreach($name in @('BiomeClarity','ProgressiveMap','QuickConnectCrossplayFix','C
  Copy-Item -LiteralPath (Join-Path $root "dist/$name.dll") -Destination $target -Force
 }
 foreach($file in Get-ChildItem (Join-Path $root 'config') -File){Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $stage 'BepInEx/config') -Force}
+if($WithoutFarLands){
+ $farlands=Join-Path $stage 'BepInEx/plugins/FarLands/FarLands.dll'
+ if(Test-Path $farlands){Rename-Item -LiteralPath $farlands -NewName 'FarLands.dll.disabled-performance-test'}
+ Copy-Item (Join-Path $root 'profiles/without-farlands/com.chase.valheimenhancededition.cfg') (Join-Path $stage 'BepInEx/config/com.chase.valheimenhancededition.cfg') -Force
+}
 $personal=Get-ChildItem $stage -Recurse -File | Where-Object {$_.Extension -in @('.dat','.key')}
 if($personal){throw 'Personal data/key files must not be packaged'}
 if(Test-Path (Join-Path $stage 'BepInEx/config/Warband')){throw 'Personal Warband friends/party files must not be packaged'}
@@ -41,11 +47,20 @@ Connexion rapide : effectuer une premiere connexion normale avec son personnage 
 Carte progressive : repartit la generation pour limiter les blocages ; la carte complete peut arriver plus tard. LivingMap conserve ses mises a jour grossieres, sans surimpression sur l'eau.
 Validation : compilation et tests de palette/identite passes. Les tests Unity historiques du monorepo sont decrits dans Mod-Documentation/VALIDATION-MONOREPO.md ; cette archive complete n'a pas ete testee en connexion multijoueur.
 "@ | Add-Content (Join-Path $stage 'INSTALLATION.txt') -Encoding UTF8
+if($WithoutFarLands){
+ @'
+
+PROFIL SANS FARLANDS — prioritaire
+FarLands desactive. VEE Far builds Distance=4000, Preset=Auto. Portee commune des objets lointains, pas un equivalent du terrain 4 km / forets 2,5 km de FarLands. Rendu et FPS a confirmer apres relance.
+Jeu ferme, renommer ou retirer tout FarLands.dll deja present dans BepInEx/plugins/FarLands : extraire le fichier .disabled seul ne desactive pas une ancienne DLL active. Les autres mods et le chargeur restent actifs.
+'@ | Add-Content (Join-Path $stage 'INSTALLATION.txt') -Encoding UTF8
+}
 $inventoryPath=Join-Path $stage 'MODS.json'
 $inventory=Get-Content $inventoryPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $inventory | Add-Member -Force NoteProperty release ([ordered]@{name=$ReleaseName;source='https://github.com/Soif2Sang/Valheim-Mods';commit=$commit;builtFromSource=$true;fullPackMultiplayerTested=$false})
 $inventory.craftFromContainersFix.status='C# source build from monorepo; compilation passed; real multiplayer refill untested'
 $inventory | Add-Member -Force NoteProperty warband ([ordered]@{version='1.3.1';upstreamVersion='1.3.0';localRevision=1;persistentParty=$true;clientOnly=$true;personalDataIncluded=$false;status='disk/policy tests and Unity packet/logout/forget probe passed; real multiplayer reconnect untested'})
+if($WithoutFarLands){$inventory | Add-Member -Force NoteProperty distanceProfile ([ordered]@{farLandsEnabled=$false;veeFarBuildsDistance=4000;veePreset='Auto';separateTerrainForestDistances=$false;liveRenderingTested=$false})}
 $hashes=[ordered]@{}
 foreach($file in Get-ChildItem $stage -Recurse -File | Sort-Object FullName){
  if($file.FullName -eq $inventoryPath){continue}
